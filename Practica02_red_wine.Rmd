@@ -1,0 +1,581 @@
+---
+title: "Tipología de Datos"
+author: "Alejandro Torres"
+date: "20 de mayo de 2019"
+output: 
+   html_document:
+    keep_md: true
+    toc: true
+    toc_float: true
+    number_sections: true
+
+---
+
+
+## ----load_libraries, include=FALSE---------------------------------------
+install.packages("knitr")
+install.packages("lubridate")
+install.packages("VIM")
+install.packages("stringr")
+install.packages("psych")
+install.packages("pROC")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("nortest")
+install.packages("Kendall")
+install.packages("BSDA")
+
+
+
+## 1. Descripción del dataset. Por qué es importante y qué pregunta/problema pretende responder?
+
+El conjunto de datos objeto de análisis se ha obtenido a partir de este enlace en Kaggle y está constituido por 12 características (columnas) que presentan 1599 características de vino portigués (filas o registros). Las variables que se disponen son fisicoquímicas (entradas) y sensoriales (la salida) (por ejemplo, no hay datos sobre tipos de uva, marca de vino, precio de venta del vino, etc.).
+
+Entre los campos de este conjunto de datos, encontramos los siguientes:
+
+**fixed.acidity**: Acidez fija, la mayoría de los ácidos relacionados con el vino. Fijos o no volátiles (no se evaporan fácilmente).
+
+**volatile.acidity**: Acidez volátil, la cantidad de ácido acético en el vino, que en niveles demasiado altos puede provocar un sabor desagradable a vinagre.    
+
+**citric.acid**: El ácido cítrico se encuentra en pequeñas cantidades, el ácido cítrico puede agregar 'frescura' y sabor a los vinos.
+
+**residual.sugar**: azúcar residual, la cantidad de az?car restante despu?s de que se detiene la fermentaci?n, es raro encontrar vinos con menos de 1 gramo / litro y vinos con m?s de 45 gramos / litro se consideran dulces.
+
+**chlorides**: Cloruro, la cantidad de sal en el vino.
+
+**free.sulfur.dioxide**: sin dioxido de azufre, la forma sin SO2 existe en equilibrio entre el SO2 molecular (como un gas disuelto) y el i?n bisulfito; Previene el crecimiento microbiano y la oxidaci?n del vino.
+
+**total.sulfur.dioxide**: Cantidad total de di?xido de azufre de formas libres y unidas de SO2; en bajas concentraciones, el SO2 es mayormente indetectable en el vino, pero a concentraciones de SO2 libres de m?s de 50 ppm, el SO2 se hace evidente en la nariz y el sabor del vino.
+
+**density**: La densidad del agua es cercana a la del agua dependiendo del porcentaje de alcohol y de contenido de az?car. 
+
+**pH**: El pH describe qu? tan ?cido o b?sico es un vino en una escala de 0 (muy ?cido) a 14 (muy b?sico); La mayor?a de los vinos est?n entre 3-4 en la escala de pH. 
+
+**sulphates**: Aditivo de vino sulphatesa que puede contribuir a los niveles de di?xido de azufre (S02), que act?a como un antimicrobiano y antioxidante.           
+**alcohol**: alcohol el porcentaje de alcohol del vino .
+
+**quality**: Variable de calidad de salida (basada en datos sensoriales, puntuaci?n entre 0 y 10). 
+
+En esta pr?ctica unificaremos los datos, los limpiaremos y trataremos de estimar un modelo que a partir de los datos nos pueda predecir los mejores vinos. Este modelo sera aplicado en el subconjunto de las vinos para ver si existe algun razonmiento entre los datos y la calidad del vino y si se puede exportar a otros pa?ses o no.
+
+## 2. Integraci?n y selecci?n de los datos de inter?s a analizar.
+
+
+**fixed.acidity**: Si a la acidez total le quitamos la acidez vol?til debida al ac?tico, la diferencia se llama acidez fija. Con lo que si hacemos la operaci?n a la inversa podemos obtener la acidez total. 
+
+**volatile.acidity**: La acidez vol?til puede oscilar entre 0,2 - 1 gr/L hasta un gramo por litro, una larga crianza en roble pueden situarse alrededor de 0,8 gr/L de acidez vol?til sin manifestar sensaciones desagradables.
+
+
+
+**citric.acid**: Este ?cido desaparece lentamente al ser fermentado por las bacterias. No es muy abundante en la uva.
+
+**residual.sugar**: Se considera vino seco o sin az?car, cuando ese contenido es inferior a cinco gramos por litro. En funci?n de esta cantidad de az?cares residuales, el vino puede ser: seco, semiseco, semidulce y dulce. Variando de menor a mayor cantidad de az?car, pudiendo ir desde 1 gramo hasta 200 gramos por litro de az?car. En los vinos secos en muchas ocasiones no suele sobrepasarse los 2 gramos.
+
+**chlorides**: 1 a 50 mg/L: potasio (agente diur?tico, efecto que se potencia en los vinos espumosos debido al alto contenido en di?xido de carbono), sodio, hierro, manganeso, boro, nitratos, cloruros y silicio
+
+**free.sulfur.dioxide** :
+
+**total.sulfur.dioxide**: En Europa su valor m?ximo no suele sobrepasar los 50 miligramos por litro pero en E.E.U.U. puede alcanzar los 350 miligramos por litro con lo que se puede saber si este vino es de buena calidad y se puede exportar.
+
+**density**: 
+
+- Vino blanco seco: 0,9880-0,9930 g/mL.
+
+- Vinos tinto seco: 0,9910-0,9950 g/mL.
+
+- Vino espumoso: 0,9890-1,0080 g/mL.
+
+- Vino de licor (moscatel): 1,0500-1,0700 g/mL.
+
+- Mosto: 1,0590-1,1150 g/mL.
+
+**pH**: El pH de la mayor?a de los vinos se encuentra en el intervalo de 2,5 a 4,5 , lo que l?gicamente recae en el lado ?cido de la escala. Un vino con un pH de 2,8 es extremadamente ?cido mientras que uno con un pH en torno a 4 es plano, carente de acidez. Los vinos blancos suelen estar entre 3 y 3,3 y la mayor?a de los tintos entre 3,3 y 3,6
+
+**sulphates**: Cualquier vino que contiene m?s de 10 mg por litro de di?xido de azufre deber? indicar en su etiqueta la expresi?n "Contiene sulfitos"
+
+**alcohol**: La graduaci?n alcoh?lica que oscila entre los 3,5 y los 15 grados
+
+**quality**: 
+
+```{r}
+library(knitr)
+library(lubridate)
+library(VIM)
+library(stringr)
+library(psych)
+library(pROC)
+library(dplyr)
+
+myfile <- "C:\\Users\\prosy\\Documents\\UOC\\Master Ciencia de datos\\Tipolog?a y ciclo de vida de los datos\\Practica 02\\winequality-red.csv"
+
+practica02 <-read.csv(myfile, header = TRUE,sep=",")
+length(practica02)
+str(practica02)
+
+#En este resumen inicial
+summary(practica02)
+
+head(practica02)
+
+practica02$total.acidity<-practica02$fixed.acidity+practica02$volatile.acidity
+
+
+# read data
+res <- sapply(practica02,class)
+kable(data.frame(variables=names(res),clase=as.vector(res)))
+
+```
+
+Convertimos la variable quality de estadisticas en tipo num?rico.
+
+```{r}
+practica02[12] <- lapply(practica02[12], as.numeric)
+res <- sapply(practica02,class)
+kable(data.frame(variables=names(res),clase=as.vector(res)))
+
+```
+
+Se crea una variable nueva llamada total.acidity (acidez total que es la suma de la acidez fija+acidez volatil).
+
+
+## 3. Limpieza de los datos.
+
+### 3.1. ?Los datos contienen ceros o elementos vac?os? ?C?mo gestionar?as cada uno de estos casos?
+
+Se comprueba si hay valores NA y los sustituyo por un campo vac?o en este estudio no hay caso NA ni vac?os. 
+
+```{r}
+colSums(is.na(practica02))
+
+colSums(practica02=="")
+
+colSums(practica02==0)
+```
+Se comprueba si hay valores que en lugar de tener valores vacios o NA tuvieran valor 0.
+
+Tambi?n se comprueba si hay valores que en lugar de nulos se hubiesen puesto con valor 0, se ve que el ?cido c?trico posee 132 registros con valor 0 pero es su valor de acidez con lo que es correcto.
+
+
+### 3.2. Identificaci?n y tratamiento de valores extremos.
+
+```{r}
+wine.fixed<-boxplot(practica02$fixed.acidity,horizontal = TRUE,main="Fixed Acidity")
+wine.fixed$out
+
+```
+```{r}
+wine.volatile<-boxplot(practica02$volatile.acidity,horizontal = TRUE,main="Volatile Acidity")
+wine.volatile$out
+
+```
+
+
+```{r}
+wine.citric<-boxplot(practica02$citric.acid,horizontal = TRUE,main="Citric Acid")
+wine.citric$out
+
+```
+
+
+```{r}
+wine.sugar<-boxplot(practica02$residual.sugar,horizontal = TRUE,main="Residual Sugar")
+wine.sugar$out
+
+```
+
+```{r}
+wine.chlorides<-boxplot(practica02$chlorides,horizontal = TRUE,main="Chlorides")
+wine.chlorides$out
+
+```
+
+```{r}
+wine.freesulfurdioxide<-boxplot(practica02$free.sulfur.dioxide,horizontal = TRUE,main="Free Sulfur Dioxide")
+wine.freesulfurdioxide$out
+
+```
+```{r}
+wine.totalsulfurdioxide<-boxplot(practica02$total.sulfur.dioxide,horizontal = TRUE,main="Total Sulfur Dioxide")
+wine.totalsulfurdioxide$out
+
+```
+```{r}
+wine.density<-boxplot(practica02$density,horizontal = TRUE,main="Density")
+wine.density$out
+
+```
+```{r}
+wine.pH<-boxplot(practica02$pH,horizontal = TRUE,main="PH")
+wine.pH$out
+```
+El Ph interviene principalmente en la sensaci?n ?cida del vino, pero tambi?n afecta al color y conservaci?n del vino. Los valores normales en los vinos oscilan entre 2,5 y 4,5. con lo que no se ven valores no coherentes con los datos.
+
+```{r}
+wine.sulphates<-boxplot(practica02$sulphates,horizontal = TRUE,main="Sulphates")
+wine.sulphates$out
+
+```
+```{r}
+wine.alcohol<-boxplot(practica02$alcohol,horizontal = TRUE,main="Alcohol")
+wine.alcohol$out
+
+```
+```{r}
+wine.quality<-boxplot(practica02$quality,horizontal = TRUE,main="Quality")
+wine.quality$out
+
+
+```
+```{r}
+wine.total.acidity<-boxplot(practica02$total.acidity,horizontal = TRUE,main="Total Acidity")
+wine.total.acidity$out
+```
+
+# 4. An?lisis de los datos.
+
+## 4.1. Selecci?n de los grupos de datos que se quieren analizar/comparar (planificaci?n de los an?lisis a aplicar).
+
+A continuaci?n, se seleccionan los grupos dentro de nuestro conjunto de datos que pueden resultar interesantes para analizar y/o comparar. No obstante, como se ver? en el apartado consistente en la realizaci?n de pruebas estad?sticas, no todos se utilizar?n.
+
+- alcohol vs. density
+- fixed.acidity vs. density
+- residual.sugar vs total.sulfur.dioxide
+- residual.sugar vs. density
+- residual.sugar vs. alcohol
+- chlorides vs. density
+- chlorides vs. sulphates
+- quality vs. alcohol
+
+## 4.2. Comprobaci?n de la normalidad y homogeneidad de la varianza.
+
+```{r}
+library(nortest)
+alpha = 0.05
+col.names = colnames(practica02)
+for (i in 1:ncol(practica02)) {
+  if (i == 1) cat("Variables que no siguen una distribuci?n normal:\n")
+  if (is.integer(practica02[,i]) | is.numeric(practica02[,i])) {
+    p_val = ad.test(practica02[,i])$p.value
+    if (p_val < alpha) {
+      cat(col.names[i])
+# Format output
+    if (i < ncol(practica02) - 1) cat(", ")
+    if (i %% 3 == 0) cat("\n")
+    }
+  }
+}
+```
+
+```{r}
+par(mfrow=c(2,2))
+for(i in 1:ncol(practica02)) {
+if (is.numeric(practica02[,i])){
+qqnorm(practica02[,i],main = paste("Normal Q-Q Plot for ",colnames(practica02)[i]))
+qqline(practica02[,i],col="red")
+hist(practica02[,i],
+main=paste("Histogram for ", colnames(practica02)[i]),
+xlab=colnames(practica02)[i], freq = FALSE)
+}
+}
+```
+
+El test nos indica que ninguna variable esta normalizada, ya que el p-valor es inferior al coeficiente 0.05, por lo que se puede rechazar la hipotesis nula y entender que no es normal.
+
+Seguidamente, pasamos a estudiar la homogeneidad de varianzas mediante la aplicaci?n de un test de Fligner-Killeen. En este caso, estudiaremos esta homogeneidad en cuanto a los grupos conformados por alcohol vs. density, fixed.acidity vs. density,residual.sugar vs total.sulfur.dioxide, residual.sugar vs. density,residual.sugar vs. alcohol, chlorides vs. density, chlorides vs. sulphates, quality vs. alcohol. En el siguiente test, la hip?tesis nula consiste en que ambas varianzas son iguales.
+
+### alcohol vs. density
+
+
+```{r}
+
+fligner.test(alcohol ~ density, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable alcohol presenta varianzas estad?sticamente diferentes para los diferentes grupos de density
+
+### fixed.acidity vs. density
+
+
+```{r}
+
+fligner.test(fixed.acidity ~ density, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable fixed.acidity presenta varianzas estad?sticamente diferentes para los diferentes grupos de density
+
+### residual.sugar vs total.sulfur.dioxide
+
+
+```{r}
+
+fligner.test(residual.sugar ~ total.sulfur.dioxide, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable residual.sugar presenta varianzas estad?sticamente diferentes para los diferentes grupos de total.sulfur.dioxide
+
+### residual.sugar vs. density
+
+
+```{r}
+
+fligner.test(residual.sugar ~ density, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable residual.sugar presenta varianzas estad?sticamente diferentes para los diferentes grupos de density
+
+### residual.sugar vs. alcohol
+
+```{r}
+
+fligner.test(residual.sugar ~ alcohol, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable residual.sugar presenta varianzas estad?sticamente diferentes para los diferentes grupos de alcohol
+
+### chlorides vs. density
+
+```{r}
+
+fligner.test(chlorides ~ density, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable chlorides presenta varianzas estad?sticamente diferentes para los diferentes grupos de density
+
+
+### chlorides vs. sulphates
+```{r}
+
+fligner.test(chlorides ~ sulphates, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable chlorides presenta varianzas estad?sticamente diferentes para los diferentes grupos de sulphates
+
+### quality vs. alcohol
+```{r}
+
+fligner.test(quality ~ alcohol, data = practica02)
+
+```
+
+Dado que ambas pruebas resultan en un p-valor inferior al nivel de significancia (<0.05), se rechaza la hip?tesis nula de homocedasticidad y se concluye que la variable quality presenta varianzas estad?sticamente diferentes para los diferentes grupos de alcohol
+
+
+## 4.3. Aplicaci?n de pruebas estad?sticas para comparar los grupos de datos. En funci?n de los datos y el objetivo del estudio, aplicar pruebas de contraste de hip?tesis, correlaciones, regresiones, etc. Aplicar al menos tres m?todos de an?lisis diferentes.
+
+```{r}
+library(Kendall)
+
+# Calcular el coeficiente de correlaci?n 
+summary(Kendall(practica02$alcohol,practica02$density))
+summary(Kendall(practica02$fixed.acidity,practica02$density))
+summary(Kendall(practica02$residual.sugar,practica02$total.sulfur.dioxide))
+summary(Kendall(practica02$residual.sugar,practica02$density))
+summary(Kendall(practica02$residual.sugar,practica02$alcohol))
+summary(Kendall(practica02$chlorides,practica02$density))
+summary(Kendall(practica02$chlorides,practica02$sulphates))
+summary(Kendall(practica02$quality,practica02$alcohol))
+
+```
+De los valores que estamos estudiando es la relaci?n quality vs alcohol la que tiene mas variable correlacionadas que es el que tiene valor -1 y +1. 0.38
+
+practica02$alcohol,practica02$density
+```{r}
+library(BSDA)
+z <- z.test(x = practica02$alcohol, y = practica02$density, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$alcohol),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$density),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+practica02$fixed.acidity,practica02$density
+```{r}
+z <- z.test(x = practica02$fixed.acidity, y = practica02$density, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$fixed.acidity),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$density),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+
+```
+
+practica02$residual.sugar,practica02$total.sulfur.dioxide
+```{r}
+z <- z.test(x = practica02$residual.sugar, y = practica02$total.sulfur.dioxide, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$residual.sugar),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$total.sulfur.dioxide),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+practica02$residual.sugar,practica02$density
+```{r}
+z <- z.test(x = practica02$residual.sugar, y = practica02$density, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$residual.sugar),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$density),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+
+practica02$residual.sugar,practica02$alcohol
+```{r}
+z <- z.test(x = practica02$residual.sugar, y = practica02$alcohol, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$residual.sugar),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$alcohol),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+
+practica02$chlorides,practica02$density
+```{r}
+z <- z.test(x = practica02$chlorides, y = practica02$density, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$chlorides),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$density),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+
+practica02$chlorides,practica02$sulphates
+```{r}
+z <- z.test(x = practica02$chlorides, y = practica02$sulphates, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$chlorides),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$sulphates),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+
+
+practica02$quality,practica02$alcohol
+```{r}
+z <- z.test(x = practica02$quality, y = practica02$alcohol, # Two samples with normal distribution
+            alt = "two.sided",          # Dos colas
+            mu = 0,                     # H_0: mu_1 - mu_2 = 0
+            sigma.x = sd(practica02$quality),     # desviaci?n est?ndar m
+            sigma.y = sd(practica02$alcohol),     # desviaci?n estandar n
+            conf.level = 0.95)          # IC: error alpha_a/2 = 0.01/2
+
+z
+```
+
+
+Para obtener un modelo de regresi?n lineal considerablemente eficiente, lo que haremos ser? obtener varios modelos de regresi?n utilizando las variables que est?n m?s correlacionadas, escogeremos el mejor utilizando como criterio aquel que presente un mayor coeficiente de determinaci?n (R2).
+```{r}
+
+modelo1 <- lm(quality~residual.sugar + total.sulfur.dioxide , data = practica02)
+modelo2 <- lm(quality~residual.sugar + total.sulfur.dioxide + density , data = practica02)
+modelo3 <- lm(quality~residual.sugar+ total.sulfur.dioxide+density+ alcohol, data = practica02)
+```
+
+
+
+Para los anteriores modelos de regresi?n lineal m?ltiple obtenidos, podemos utilizar el coeficiente de determinaci?n para medir la bondad de los ajustes y quedarnos con aquel modelo que mejor coeficiente presente.
+
+```{r}
+
+# Tabla con los coeficientes de determinaci?n de cada modelo
+tabla.coeficientes <- matrix(c(1, summary(modelo1)$r.squared,
+2, summary(modelo2)$r.squared,
+3, summary(modelo3)$r.squared),
+ncol = 2, byrow = TRUE)
+colnames(tabla.coeficientes) <- c("Modelo", "R^2")
+tabla.coeficientes
+```
+El mejor modelo para elegir es el 3.
+
+```{r}
+newdata <- data.frame(
+residual.sugar=18,
+total.sulfur.dioxide=34,
+density=0.998,
+alcohol=9.2
+)
+# Predecir el precio
+predict(modelo3, newdata)
+```
+
+
+
+# 5. Representaci?n de los resultados a partir de tablas y gr?ficas.
+
+```{r}
+library(ggplot2)
+ggplot(data = practica02, 
+       aes(x = density, y = alcohol, color = factor(quality))) +
+   geom_point(alpha = 1/2, position = position_jitter(h = 0), size = 2) +
+   coord_cartesian(xlim=c(min(practica02$density),1.005), ylim=c(8,15)) +
+   scale_color_brewer(type='qual') +
+   xlab('Density') +
+   ylab('Alcohol') +
+   ggtitle('Density vs. Alcohol correlacionada con Quality')
+
+
+
+```
+
+```{r}
+ggplot(data = practica02, 
+       aes(x = density, y = alcohol) )+
+   facet_wrap( ~ quality) +
+   geom_boxplot() +
+   xlab('Density') +
+   ylab('Alcohol') +
+   ggtitle('Density vs. Alcohol correlacionada con Quality')
+```
+
+```{r}
+ggplot(data = practica02, aes(y = alcohol, x = quality)) +
+   geom_boxplot() +
+   geom_smooth(method = 'lm') +
+   facet_wrap(~ quality) +
+   xlab('Quality') +
+   ylab('Alcohol') +
+   ggtitle('Como afecta el grado de alcohol a la calidad del vino')
+```
+
+
+# 6. Resoluci?n del problema. A partir de los resultados obtenidos, ?cu?les son las conclusiones? ?Los resultados permiten responder al problema?
+
+La densidad y el alcohol muestran la correlaci?n m?s fuerte entre todos los par?metros del vino. El porcentaje de alcohol tiene un nivel de calidad 7, el vino con menos alcohol es el nivel de calidad 5. El vino con niveles de calidad 6 y 8 tiene varias combinaciones de alcohol y densidad.
+El nivel de alcohol y la calidad tienen un valor de correlaci?n de 0,4. Esta es la correlaci?n m?s fuerte que hemos encontrado entre un par?metro objetivo del vino y la calidad del vino. 0.4 no es un nivel de correlaci?n alto, por lo que no podemos usar el alcohol como par?metro para la predicci?n de la calidad.
+
+
+
+**10. Finalmente, crear el archivo de datos corregido.**
+```{r}
+
+write.csv(practica02, file = "torres_fichero_clean.csv",row.names=FALSE)
+
+```
+
+
